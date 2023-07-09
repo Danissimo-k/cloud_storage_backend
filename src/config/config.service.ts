@@ -44,17 +44,6 @@ class ConfigService {
 
 }
 
-// const configService = new ConfigService(process.env)
-//     .ensureValues([
-//         'HOST',
-//         'PORT',
-//         'DB_USER',
-//         'PASSWORD',
-//         'DATABASE'
-//     ]);
-//
-// export { configService };
-
 export default () => {
     const obj = {}
     Object.keys(process.env).forEach(k => {

@@ -1,21 +1,25 @@
+import {Response} from 'express';
 import {
-    Controller, Delete,
+    Controller,
+    Delete,
     Get,
     MaxFileSizeValidator,
     ParseFilePipe,
     Post,
     Query,
+    Res, StreamableFile,
     UploadedFile,
     UseGuards,
     UseInterceptors
 } from '@nestjs/common';
 import {FilesService} from './files.service';
-import {ApiBearerAuth, ApiBody, ApiConsumes, ApiTags} from "@nestjs/swagger";
+import {ApiBearerAuth, ApiBody, ApiConsumes, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {FileInterceptor} from "@nestjs/platform-express";
 import {fileStorage} from "./storage";
 import {JwtGuard} from "../auth/guards/jwt.guard";
 import {userIdDecorator} from "../auth/decorators/user-id.decorator";
 import {FileType} from "./entities/file.entity";
+import {ApiFileResponse} from "./decorators/api-file-response";
 
 
 @Controller('files')
@@ -24,6 +28,27 @@ import {FileType} from "./entities/file.entity";
 @ApiBearerAuth()
 export class FilesController {
     constructor(private readonly filesService: FilesService) {
+    }
+
+
+    @ApiFileResponse(
+        'application/octet-stream',
+    )
+    @Get('/download')
+    async getFile(
+        @Query('ids') ids: string,
+        @Res({passthrough: true}) response: Response
+    ) {
+        const idsArray = ids.split(',')
+        if (idsArray.length > 1) {
+            response.attachment('archive-name.zip');
+            const files = await this.filesService.findAllByIds(idsArray);
+            await this.filesService.compressFiles(files, response)
+        } else {
+            const file = await this.filesService.findOne(idsArray[0]);
+            response.attachment(file.filename);
+            return new StreamableFile(this.filesService.getFileStream(file.filename))
+        }
     }
 
     @Get()
